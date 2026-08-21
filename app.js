@@ -1088,6 +1088,33 @@ async function blobToBase64Raw(blob) {
   return dataUrl.split(",")[1];
 }
 
+function aiErrorMessage(errData) {
+  const ar = currentLang === "ar";
+  switch (errData.error) {
+    case "missing_key":
+      return ar
+        ? "لم يتم إعداد مفتاح OpenAI بشكل صحيح في Cloudflare. تأكدي إن اسم الـ Secret بالضبط OPENAI_API_KEY."
+        : "The OpenAI key isn't set up correctly in Cloudflare. Check the secret is named exactly OPENAI_API_KEY.";
+    case "ai_failed": {
+      const status = errData.status ? ` (${errData.status})` : "";
+      const detail = errData.detail ? `: ${errData.detail}` : "";
+      return ar
+        ? `فشل الاتصال بـ OpenAI${status}${detail}. تأكدي من صلاحية المفتاح ووجود رصيد في حسابك.`
+        : `OpenAI request failed${status}${detail}. Check your API key and account balance.`;
+    }
+    case "invalid_json":
+    case "invalid_schema":
+      return ar
+        ? "استجابة غير متوقعة من الذكاء الاصطناعي. حاولي مرة أخرى."
+        : "Unexpected response from the AI. Please try again.";
+    case "no_input":
+    case "bad_request":
+      return t("aiNeedInput");
+    default:
+      return t("aiAnalyzeFailed");
+  }
+}
+
 document.getElementById("analyzeAIBtn").addEventListener("click", async () => {
   const text = document.getElementById("observationText").value.trim();
   if (!text && stagedPhotos.length === 0) {
@@ -1110,7 +1137,7 @@ document.getElementById("analyzeAIBtn").addEventListener("click", async () => {
     if (!resp.ok) {
       const errData = await resp.json().catch(() => ({}));
       console.error("AI analyze error:", errData);
-      showToast(t("aiAnalyzeFailed"));
+      showToast(aiErrorMessage(errData));
       return;
     }
 

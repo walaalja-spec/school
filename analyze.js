@@ -101,7 +101,14 @@ export async function onRequestPost(context) {
   if (!aiResponse.ok) {
     const errText = await aiResponse.text().catch(() => "");
     console.error("OpenAI API error:", aiResponse.status, errText);
-    return jsonResponse({ error: "ai_failed" }, 502);
+    let detail = "";
+    try {
+      const errJson = JSON.parse(errText);
+      detail = (errJson.error && errJson.error.message) || "";
+    } catch (e) {
+      detail = errText.slice(0, 200);
+    }
+    return jsonResponse({ error: "ai_failed", status: aiResponse.status, detail }, 502);
   }
 
   let data;
